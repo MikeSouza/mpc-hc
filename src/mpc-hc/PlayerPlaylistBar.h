@@ -113,6 +113,8 @@ public:
 
     bool SelectFileInPlaylist(LPCTSTR filename);
 
+    bool FileExistsInPlaylist(LPCTSTR filename);
+
 protected:
     virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
     virtual BOOL PreTranslateMessage(MSG* pMsg);

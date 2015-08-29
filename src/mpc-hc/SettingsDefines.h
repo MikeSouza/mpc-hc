@@ -161,6 +161,7 @@
 #define IDS_RS_DSVIDEORENDERERTYPE          _T("DSVidRen")
 #define IDS_RS_RMVIDEORENDERERTYPE          _T("RMVidRen")
 #define IDS_RS_QTVIDEORENDERERTYPE          _T("QTVidRen")
+#define IDS_RS_ALLOWDUPLICATEPLAYLISTITEMS  _T("AllowDuplicatePlaylistItems")
 #define IDS_RS_SHUFFLEPLAYLISTITEMS         _T("ShufflePlaylistItems")
 #define IDS_RS_REMEMBERPLAYLISTITEMS        _T("RememberPlaylistItems")
 #define IDS_RS_HIDEPLAYLISTFULLSCREEN       _T("HidePlaylistFullScreen")

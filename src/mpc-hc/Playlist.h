@@ -65,6 +65,7 @@ public:
 
     bool RemoveAll();
     bool RemoveAt(POSITION pos);
+    void RemoveDuplicates();
 
     void SortById(), SortByName(), SortByPath(), Randomize();
 

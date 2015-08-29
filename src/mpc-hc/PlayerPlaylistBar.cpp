@@ -149,11 +149,15 @@ void CPlayerPlaylistBar::AddItem(CString fn, CAtlList<CString>* subs)
 void CPlayerPlaylistBar::AddItem(CAtlList<CString>& fns, CAtlList<CString>* subs)
 {
     CPlaylistItem pli;
+    CAppSettings& s = AfxGetAppSettings();
 
     POSITION pos = fns.GetHeadPosition();
     while (pos) {
         CString fn = fns.GetNext(pos);
         if (!fn.Trim().IsEmpty()) {
+            if (!s.bAllowDuplicatePlaylistItems && FileExistsInPlaylist(fn)) {
+                continue;
+            }
             pli.m_fns.AddTail(fn);
         }
     }
@@ -163,14 +167,18 @@ void CPlayerPlaylistBar::AddItem(CAtlList<CString>& fns, CAtlList<CString>* subs
         while (posSub) {
             CString fn = subs->GetNext(posSub);
             if (!fn.Trim().IsEmpty()) {
+                if (!s.bAllowDuplicatePlaylistItems && FileExistsInPlaylist(fn)) {
+                    continue;
+                }
                 pli.m_subs.AddTail(fn);
             }
         }
     }
 
-    pli.AutoLoadFiles();
-
-    m_pl.AddTail(pli);
+    if (!pli.m_fns.IsEmpty()) {
+        pli.AutoLoadFiles();
+        m_pl.AddTail(pli);
+    }
 }
 
 static bool SearchFiles(CString mask, CAtlList<CString>& sl)
@@ -512,8 +520,20 @@ void CPlayerPlaylistBar::Append(CAtlList<CString>& fns, bool fMulti, CAtlList<CS
         ParsePlayList(fns, subs);
     }
 
+    CPlaylistItem* pli = GetCur();
+    if (!(pli && !pli->m_fns.IsEmpty())) {
+        pli = &(m_pl.GetTail());
+    }
+
     Refresh();
     SavePlaylist();
+
+    if (pli && !pli->m_fns.IsEmpty()) {
+        CString fn = pli->m_fns.GetHead();
+        SelectFileInPlaylist(fn);
+    } else {
+        SetLast();
+    }
 }
 
 void CPlayerPlaylistBar::Open(CStringW vdn, CStringW adn, int vinput, int vchannel, int ainput)
@@ -565,12 +585,16 @@ void CPlayerPlaylistBar::SetupList()
 void CPlayerPlaylistBar::UpdateList()
 {
     POSITION pos = m_pl.GetHeadPosition();
-    for (int i = 0, j = m_list.GetItemCount(); pos && i < j; i++) {
-        CPlaylistItem& pli = m_pl.GetAt(pos);
-        m_list.SetItemData(i, (DWORD_PTR)pos);
-        m_list.SetItemText(i, COL_NAME, pli.GetLabel(0));
-        m_list.SetItemText(i, COL_TIME, pli.GetLabel(1));
-        m_pl.GetNext(pos);
+    for (int i = 0, j = m_list.GetItemCount(); i < j; i++) {
+        if (pos) {
+            CPlaylistItem& pli = m_pl.GetAt(pos);
+            m_list.SetItemData(i, (DWORD_PTR)pos);
+            m_list.SetItemText(i, COL_NAME, pli.GetLabel(0));
+            m_list.SetItemText(i, COL_TIME, pli.GetLabel(1));
+            m_pl.GetNext(pos);
+        } else {
+            m_list.DeleteItem(i);
+        }
     }
 }
 
@@ -801,6 +825,23 @@ bool CPlayerPlaylistBar::SelectFileInPlaylist(LPCTSTR filename)
         }
         m_pl.GetNext(pos);
     }
+    return false;
+}
+
+bool CPlayerPlaylistBar::FileExistsInPlaylist(LPCTSTR filename)
+{
+    if (!filename) {
+        return false;
+    }
+    POSITION pos = m_pl.GetHeadPosition();
+    while (pos) {
+        CPlaylistItem& pli = m_pl.GetAt(pos);
+        if (pli.FindFile(filename)) {
+            return true;
+        }
+        m_pl.GetNext(pos);
+    }
+
     return false;
 }
 
@@ -1314,6 +1355,7 @@ void CPlayerPlaylistBar::OnContextMenu(CWnd* /*pWnd*/, CPoint p)
         M_SORTBYPATH,
         M_RANDOMIZE,
         M_SORTBYID,
+        M_ALLOWDUPLICATES,
         M_SHUFFLE,
         M_HIDEFULLSCREEN
     };
@@ -1335,6 +1377,8 @@ void CPlayerPlaylistBar::OnContextMenu(CWnd* /*pWnd*/, CPoint p)
     m.AppendMenu(MF_STRING | (!m_pl.GetCount() ? (MF_DISABLED | MF_GRAYED) : MF_ENABLED), M_SORTBYPATH, ResStr(IDS_PLAYLIST_SORTBYPATH));
     m.AppendMenu(MF_STRING | (!m_pl.GetCount() ? (MF_DISABLED | MF_GRAYED) : MF_ENABLED), M_RANDOMIZE, ResStr(IDS_PLAYLIST_RANDOMIZE));
     m.AppendMenu(MF_STRING | (!m_pl.GetCount() ? (MF_DISABLED | MF_GRAYED) : MF_ENABLED), M_SORTBYID, ResStr(IDS_PLAYLIST_RESTORE));
+    m.AppendMenu(MF_SEPARATOR);
+    m.AppendMenu(MF_STRING | MF_ENABLED | (s.bAllowDuplicatePlaylistItems ? MF_CHECKED : MF_UNCHECKED), M_ALLOWDUPLICATES, ResStr(IDS_PLAYLIST_ALLOWDUPLICATES));
     m.AppendMenu(MF_SEPARATOR);
     m.AppendMenu(MF_STRING | MF_ENABLED | (s.bShufflePlaylistItems ? MF_CHECKED : MF_UNCHECKED), M_SHUFFLE, ResStr(IDS_PLAYLIST_SHUFFLE));
     m.AppendMenu(MF_SEPARATOR);
@@ -1543,6 +1587,14 @@ void CPlayerPlaylistBar::OnContextMenu(CWnd* /*pWnd*/, CPoint p)
             }
         }
         break;
+        case M_ALLOWDUPLICATES:
+            s.bAllowDuplicatePlaylistItems = !s.bAllowDuplicatePlaylistItems;
+            if (!s.bAllowDuplicatePlaylistItems) {
+                m_pl.RemoveDuplicates();
+                UpdateList();
+                SavePlaylist();
+            }
+            break;
         case M_SHUFFLE:
             s.bShufflePlaylistItems = !s.bShufflePlaylistItems;
             break;

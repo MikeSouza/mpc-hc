@@ -271,6 +271,22 @@ int compare2(const void* arg1, const void* arg2)
     return StrCmpLogicalW(((plsort2_t*)arg1)->str, ((plsort2_t*)arg2)->str);
 }
 
+void CPlaylist::RemoveDuplicates()
+{
+    CAtlMap<LPCTSTR, POSITION, CStringElementTraits<CString>> a;
+    POSITION pos = GetHeadPosition();
+    for (int i = 0; pos; i++, GetNext(pos)) {
+        LPCTSTR path = GetAt(pos).m_fns.GetHead();
+        if (a.Lookup(path)) {
+            POSITION temp = pos;
+            __super::RemoveAt(temp);
+            GetPrev(pos);
+        } else {
+            a.SetAt(path, pos);
+        }
+    }
+}
+
 void CPlaylist::SortById()
 {
     CAtlArray<plsort_t> a;

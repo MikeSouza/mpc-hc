@@ -574,6 +574,7 @@ public:
     CString         strShadercombine;
     CString         strShadercombineScreenSpace;
     // Playlist (contex menu)
+    bool            bAllowDuplicatePlaylistItems;
     bool            bShufflePlaylistItems;
     bool            bHidePlaylistFullScreen;
 
